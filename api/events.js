@@ -26,13 +26,19 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'PUT') {
-      const { id, day_of_week } = req.body;
-      if (!id || day_of_week == null) {
-        return res.status(400).json({ error: 'id and day_of_week required' });
+      const { id, day_of_week, time_label, title, color } = req.body;
+      if (!id) {
+        return res.status(400).json({ error: 'id required' });
       }
       const { rows } = await pool.query(
-        'UPDATE events SET day_of_week = $1 WHERE id = $2 RETURNING *',
-        [day_of_week, id]
+        `UPDATE events
+         SET day_of_week = COALESCE($1, day_of_week),
+             time_label  = COALESCE($2, time_label),
+             title       = COALESCE($3, title),
+             color       = COALESCE($4, color)
+         WHERE id = $5
+         RETURNING *`,
+        [day_of_week, time_label, title, color, id]
       );
       if (!rows.length) return res.status(404).json({ error: 'Event not found' });
       return res.status(200).json(rows[0]);

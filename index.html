@@ -563,7 +563,7 @@
 <!-- Add event modal -->
 <div id="overlay" class="overlay">
   <div class="modal" role="dialog" aria-modal="true">
-    <h3>Adicionar Evento</h3>
+    <h3 id="modal-title">Adicionar Evento</h3>
     <div class="modal-sub" id="modal-day-name"></div>
     <div class="field">
       <label>Hora</label>
@@ -586,7 +586,7 @@
     </div>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-accent" onclick="saveEvent()">Guardar</button>
+      <button class="btn btn-accent" id="modal-save-btn" onclick="saveEvent()">Guardar</button>
     </div>
   </div>
 </div>
@@ -609,8 +609,10 @@ function jsToOur(j) { return j === 0 ? 6 : j - 1; }
 let daysMap   = {};   // dayNum → row
 let evList    = [];   // [{id,day_of_week,time_label,title,color}]
 let modalDay  = null; // day_of_week 0-6 currently adding to
+let modalEventId = null;
 let selColor  = '#c8f135';
 let dragId    = null;
+let draggingEvent = false;
 
 // ── API ────────────────────────────────────────────────────────────────────
 async function api(path, method = 'GET', body = null) {
@@ -748,6 +750,7 @@ function renderSchedule() {
   // Attach drag listeners
   document.querySelectorAll('.ev-card').forEach(card => {
     card.addEventListener('dragstart', e => {
+      draggingEvent = true;
       dragId = parseInt(card.dataset.id);
       card.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
@@ -756,6 +759,10 @@ function renderSchedule() {
     card.addEventListener('dragend', () => {
       card.classList.remove('dragging');
       document.querySelectorAll('.sched-col').forEach(c => c.classList.remove('drag-over'));
+      setTimeout(() => { draggingEvent = false; }, 0);
+    });
+    card.addEventListener('click', () => {
+      if (!draggingEvent) openEventModal(parseInt(card.dataset.id));
     });
   });
 }
@@ -818,7 +825,10 @@ async function handleDrop(e, newDay, col) {
 // ── Modal ──────────────────────────────────────────────────────────────────
 function openModal(dayOfWeek) {
   modalDay = dayOfWeek;
+  modalEventId = null;
+  document.getElementById('modal-title').textContent = 'Adicionar Evento';
   document.getElementById('modal-day-name').textContent = WD_LONG[dayOfWeek];
+  document.getElementById('modal-save-btn').textContent = 'Guardar';
   document.getElementById('inp-time').value  = '';
   document.getElementById('inp-title').value = '';
   selColor = '#c8f135';
@@ -829,9 +839,29 @@ function openModal(dayOfWeek) {
   setTimeout(() => document.getElementById('inp-time').focus(), 80);
 }
 
+function openEventModal(id) {
+  const ev = evList.find(x => x.id === id);
+  if (!ev) return;
+
+  modalDay = ev.day_of_week;
+  modalEventId = id;
+  document.getElementById('modal-title').textContent = 'Editar Evento';
+  document.getElementById('modal-day-name').textContent = WD_LONG[ev.day_of_week];
+  document.getElementById('modal-save-btn').textContent = 'Atualizar';
+  document.getElementById('inp-time').value  = ev.time_label;
+  document.getElementById('inp-title').value = ev.title;
+  selColor = ev.color || '#c8f135';
+  document.querySelectorAll('.swatch').forEach(s => {
+    s.classList.toggle('on', s.dataset.c === selColor);
+  });
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(() => document.getElementById('inp-time').focus(), 80);
+}
+
 function closeModal() {
   document.getElementById('overlay').classList.remove('open');
   modalDay = null;
+  modalEventId = null;
 }
 
 document.querySelectorAll('.swatch').forEach(s => {
@@ -847,6 +877,21 @@ async function saveEvent() {
   if (!time || !title) { toast('Preenche a hora e o nome'); return; }
 
   try {
+    if (modalEventId !== null) {
+      const updated = await api('/api/events', 'PUT', {
+        id: modalEventId,
+        time_label: time,
+        title,
+        color: selColor,
+      });
+      const idx = evList.findIndex(ev => ev.id === modalEventId);
+      if (idx !== -1) evList[idx] = updated;
+      closeModal();
+      renderSchedule();
+      toast(`"${title}" atualizado`);
+      return;
+    }
+
     const ev = await api('/api/events', 'POST', {
       day_of_week: modalDay,
       time_label:  time,
