@@ -3,9 +3,9 @@ const { getPool } = require('./_db');
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const pool = getPool();
-
   try {
+    const pool = getPool();
+
     if (req.method === 'GET') {
       const { rows } = await pool.query('SELECT * FROM days ORDER BY day_number');
       return res.status(200).json(rows);

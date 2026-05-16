@@ -25,9 +25,9 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const pool = getPool();
-
   try {
+    const pool = getPool();
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS days (
         day_number INTEGER PRIMARY KEY,
