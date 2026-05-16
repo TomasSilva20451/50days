@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>50 Dias — Foco Total</title>
+  <style>
+    :root {
+      --bg:         #0e0e0e;
+      --surface:    #161616;
+      --card:       #1e1e1e;
+      --border:     #2a2a2a;
+      --accent:     #c8f135;
+      --accent-dim: rgba(200, 241, 53, 0.10);
+      --accent-glow:rgba(200, 241, 53, 0.25);
+      --text:       #f0f0f0;
+      --muted:      #6b6b6b;
+      --danger:     #ff5555;
+      --radius:     10px;
+      --radius-sm:  6px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+      min-height: 100vh;
+      line-height: 1.4;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ────────────────────────────────────── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 22px 32px 18px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 14px;
+      gap: 12px;
+    }
+
+    h1 {
+      font-size: clamp(1.2rem, 3vw, 1.7rem);
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+
+    h1 em {
+      font-style: normal;
+      color: var(--accent);
+    }
+
+    .header-meta {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .day-counter {
+      font-size: 0.8rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .day-counter strong {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--accent);
+      display: block;
+      line-height: 1;
+    }
+
+    .progress-bar {
+      background: var(--border);
+      border-radius: 100px;
+      height: 6px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      background: var(--accent);
+      height: 100%;
+      border-radius: 100px;
+      transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .progress-text {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 7px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .progress-text span { color: var(--accent); font-weight: 700; }
+
+    /* ── Main ──────────────────────────────────────── */
+    main {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 36px 32px 60px;
+    }
+
+    section { margin-bottom: 52px; }
+
+    .section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── 53-Day Grid ───────────────────────────────── */
+    .days-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+      gap: 8px;
+    }
+
+    .day-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      padding: 12px 8px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      transition: border-color 0.15s, background 0.15s, transform 0.15s, box-shadow 0.15s;
+      position: relative;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .day-card:hover:not(.future) {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .day-card.completed {
+      background: var(--accent-dim);
+      border-color: rgba(200, 241, 53, 0.35);
+    }
+
+    .day-card.today {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-glow);
+    }
+
+    .day-card.today .day-num { color: var(--accent); }
+
+    .day-card.future {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    .day-check {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      width: 15px;
+      height: 15px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      color: #000;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .day-num {
+      font-size: 1.5rem;
+      font-weight: 900;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .day-card.completed .day-num { color: var(--accent); }
+
+    .day-date {
+      font-size: 0.62rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .day-wd {
+      font-size: 0.58rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    @keyframes pop {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.18); }
+      70%  { transform: scale(0.96); }
+      100% { transform: scale(1); }
+    }
+
+    .day-card.popping { animation: pop 0.35s ease; }
+
+    /* ── Weekly Schedule ───────────────────────────── */
+    .schedule-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 6px;
+      margin: 0 -4px;
+      padding: 0 4px 8px;
+    }
+
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(130px, 1fr));
+      gap: 8px;
+      min-width: 840px;
+    }
+
+    .sched-col {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      min-height: 220px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .sched-col.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .col-head {
+      padding: 12px 10px 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .col-head .wd-name {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .sched-col.today-col .col-head .wd-name {
+      color: var(--accent);
+    }
+
+    .sched-col.today-col {
+      border-color: rgba(200, 241, 53, 0.2);
+    }
+
+    .col-body {
+      flex: 1;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    /* ── Event cards ───────────────────────────────── */
+    .ev-card {
+      border-radius: var(--radius-sm);
+      padding: 7px 8px;
+      cursor: grab;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: opacity 0.2s, transform 0.15s;
+      background: rgba(0, 0, 0, 0.25);
+      border-left: 3px solid var(--ev-color, var(--accent));
+    }
+
+    .ev-card:active { cursor: grabbing; }
+    .ev-card.dragging { opacity: 0.3; transform: scale(0.97); }
+
+    .ev-info { flex: 1; min-width: 0; }
+
+    .ev-time {
+      font-size: 0.6rem;
+      color: var(--muted);
+      margin-bottom: 1px;
+      white-space: nowrap;
+    }
+
+    .ev-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--ev-color, var(--accent));
+    }
+
+    .ev-del {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      padding: 2px 3px;
+      opacity: 0;
+      transition: opacity 0.12s, color 0.12s;
+      flex-shrink: 0;
+    }
+
+    .ev-card:hover .ev-del { opacity: 1; }
+    .ev-del:hover { color: var(--danger); }
+
+    .add-btn {
+      background: none;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.68rem;
+      padding: 6px 8px;
+      width: 100%;
+      text-align: center;
+      margin-top: auto;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .add-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── Modal ─────────────────────────────────────── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 20px;
+    }
+
+    .overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      width: min(420px, 100%);
+    }
+
+    .modal h3 {
+      font-size: 1.1rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .modal-sub {
+      font-size: 0.78rem;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 22px;
+    }
+
+    .field { margin-bottom: 16px; }
+
+    .field label {
+      display: block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+
+    .field input {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.9rem;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+
+    .field input:focus { border-color: var(--accent); }
+    .field input::placeholder { color: var(--muted); }
+
+    .swatches {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color 0.12s, transform 0.12s;
+    }
+
+    .swatch.on {
+      border-color: #fff;
+      transform: scale(1.2);
+    }
+
+    .modal-btns {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 11px;
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+      transition: opacity 0.15s;
+    }
+
+    .btn:hover { opacity: 0.85; }
+
+    .btn-ghost {
+      background: var(--card);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover { color: var(--text); opacity: 1; }
+
+    .btn-accent {
+      background: var(--accent);
+      color: #000;
+    }
+
+    /* ── Toast ─────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 100px;
+      padding: 9px 20px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      white-space: nowrap;
+      z-index: 300;
+      transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+      pointer-events: none;
+    }
+
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Error banner ──────────────────────────────── */
+    .err-banner {
+      background: rgba(255, 85, 85, 0.08);
+      border: 1px solid var(--danger);
+      border-radius: var(--radius);
+      padding: 20px;
+      color: var(--danger);
+      text-align: center;
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+
+    .err-banner small { opacity: 0.7; display: block; margin-top: 6px; font-size: 0.75rem; }
+
+    /* ── Responsive ────────────────────────────────── */
+    @media (max-width: 640px) {
+      header { padding: 16px 18px 14px; }
+      main   { padding: 24px 18px 48px; }
+      .days-grid { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 6px; }
+      .day-num { font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <h1>50 Dias —&nbsp;<em>Foco Total</em></h1>
+    <div class="header-meta">
+      <div class="day-counter">
+        <strong id="hd-day">—</strong>
+        de 53
+      </div>
+    </div>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-fill" id="prog-fill" style="width:0%"></div>
+  </div>
+  <div class="progress-text">
+    <span id="prog-label">A carregar…</span>
+    <span id="prog-pct">0%</span>
+  </div>
+</header>
+
+<main>
+  <section>
+    <div class="section-label">Progresso — 53 dias</div>
+    <div id="days-grid" class="days-grid">
+      <!-- skeleton -->
+      <div style="color:var(--muted);font-size:.8rem;padding:8px">A carregar…</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label">Horário Semanal</div>
+    <div class="schedule-scroll">
+      <div id="sched-grid" class="schedule-grid">
+        <div style="color:var(--muted);font-size:.8rem;padding:8px">A carregar…</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Add event modal -->
+<div id="overlay" class="overlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3>Adicionar Evento</h3>
+    <div class="modal-sub" id="modal-day-name"></div>
+    <div class="field">
+      <label>Hora</label>
+      <input id="inp-time" placeholder="ex: 10h, 7h–9h, 10h+" autocomplete="off" />
+    </div>
+    <div class="field">
+      <label>Nome</label>
+      <input id="inp-title" placeholder="ex: Ginásio, Ténis…" autocomplete="off" />
+    </div>
+    <div class="field">
+      <label>Cor</label>
+      <div class="swatches" id="swatches">
+        <div class="swatch on"  data-c="#c8f135" style="background:#c8f135"></div>
+        <div class="swatch"     data-c="#ff9800" style="background:#ff9800"></div>
+        <div class="swatch"     data-c="#4fc3f7" style="background:#4fc3f7"></div>
+        <div class="swatch"     data-c="#ce93d8" style="background:#ce93d8"></div>
+        <div class="swatch"     data-c="#f48fb1" style="background:#f48fb1"></div>
+        <div class="swatch"     data-c="#69f0ae" style="background:#69f0ae"></div>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveEvent()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+const START     = new Date(2026, 4, 16); // 16 Mai 2026
+const N_DAYS    = 53;
+const WD_LONG   = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+const WD_SHORT  = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+const MONTHS_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+// day_of_week: 0=Segunda … 5=Sábado, 6=Domingo
+// JS getDay():  0=Sun, 1=Mon … 6=Sat
+function jsToOur(j) { return j === 0 ? 6 : j - 1; }
+
+// ── State ──────────────────────────────────────────────────────────────────
+let daysMap   = {};   // dayNum → row
+let evList    = [];   // [{id,day_of_week,time_label,title,color}]
+let modalDay  = null; // day_of_week 0-6 currently adding to
+let selColor  = '#c8f135';
+let dragId    = null;
+
+// ── API ────────────────────────────────────────────────────────────────────
+async function api(path, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body !== null) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  if (!r.ok) {
+    const txt = await r.text();
+    throw new Error(`${r.status} — ${txt}`);
+  }
+  return r.json();
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    await api('/api/init');
+    const [days, evs] = await Promise.all([api('/api/days'), api('/api/events')]);
+    days.forEach(d => daysMap[d.day_number] = d);
+    evList = evs;
+    render();
+  } catch (err) {
+    console.error(err);
+    document.getElementById('days-grid').innerHTML =
+      `<div class="err-banner">
+        Erro ao ligar à base de dados.<br>
+        Certifica-te que a variável <strong>DATABASE_URL</strong> está configurada no Vercel.
+        <small>${err.message}</small>
+       </div>`;
+    document.getElementById('sched-grid').innerHTML = '';
+  }
+}
+
+// ── Date helpers ───────────────────────────────────────────────────────────
+function dayDate(n) {
+  const d = new Date(START);
+  d.setDate(d.getDate() + n - 1);
+  return d;
+}
+
+function todayFloor() {
+  const t = new Date();
+  return new Date(t.getFullYear(), t.getMonth(), t.getDate());
+}
+
+function todayNum() {
+  const diff = Math.floor((todayFloor() - START) / 86400000) + 1;
+  return diff;
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function render() {
+  const completed = Object.values(daysMap).filter(d => d.completed).length;
+  const pct       = Math.round((completed / N_DAYS) * 100);
+  const tn        = todayNum();
+
+  document.getElementById('hd-day').textContent    = Math.min(Math.max(tn, 1), N_DAYS);
+  document.getElementById('prog-fill').style.width = `${pct}%`;
+  document.getElementById('prog-label').textContent =
+    `${completed} de ${N_DAYS} dias concluídos`;
+  document.getElementById('prog-pct').textContent  = `${pct}%`;
+
+  renderGrid(tn);
+  renderSchedule();
+}
+
+function renderGrid(tn) {
+  const grid = document.getElementById('days-grid');
+  grid.innerHTML = '';
+
+  for (let i = 1; i <= N_DAYS; i++) {
+    const d       = daysMap[i] || {};
+    const date    = dayDate(i);
+    const isFut   = i > tn;
+    const isToday = i === tn;
+    const done    = !!d.completed;
+
+    const card = document.createElement('div');
+    card.id        = `dc-${i}`;
+    card.className = ['day-card', done?'completed':'', isToday?'today':'', isFut?'future':'']
+                       .filter(Boolean).join(' ');
+
+    const wd      = WD_SHORT[jsToOur(date.getDay())];
+    const dateStr = `${date.getDate()} ${MONTHS_PT[date.getMonth()]}`;
+
+    card.innerHTML =
+      (done ? '<div class="day-check">✓</div>' : '') +
+      `<div class="day-num">${i}</div>` +
+      `<div class="day-date">${dateStr}</div>` +
+      `<div class="day-wd">${wd}</div>`;
+
+    if (!isFut) card.addEventListener('click', () => toggleDay(i));
+    grid.appendChild(card);
+  }
+}
+
+function renderSchedule() {
+  const todayWd = jsToOur(todayFloor().getDay());
+  const grid    = document.getElementById('sched-grid');
+  grid.innerHTML = '';
+
+  for (let d = 0; d < 7; d++) {
+    const isToday = d === todayWd;
+    const colEvs  = evList.filter(e => e.day_of_week === d);
+
+    const col = document.createElement('div');
+    col.className   = ['sched-col', isToday ? 'today-col' : ''].filter(Boolean).join(' ');
+    col.dataset.day = d;
+
+    col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
+    col.addEventListener('dragleave', ()  => col.classList.remove('drag-over'));
+    col.addEventListener('drop',     e  => handleDrop(e, d, col));
+
+    const evHTML = colEvs.map(ev =>
+      `<div class="ev-card" draggable="true" data-id="${ev.id}"
+            style="--ev-color:${ev.color}">
+         <div class="ev-info">
+           <div class="ev-time">${ev.time_label}</div>
+           <div class="ev-title">${ev.title}</div>
+         </div>
+         <button class="ev-del" title="Remover" onclick="delEvent(${ev.id},event)">×</button>
+       </div>`
+    ).join('');
+
+    col.innerHTML =
+      `<div class="col-head"><div class="wd-name">${WD_SHORT[d]}</div></div>
+       <div class="col-body">
+         ${evHTML}
+         <button class="add-btn" onclick="openModal(${d})">+ Adicionar</button>
+       </div>`;
+
+    grid.appendChild(col);
+  }
+
+  // Attach drag listeners
+  document.querySelectorAll('.ev-card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      dragId = parseInt(card.dataset.id);
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(dragId));
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      document.querySelectorAll('.sched-col').forEach(c => c.classList.remove('drag-over'));
+    });
+  });
+}
+
+// ── Interactions ───────────────────────────────────────────────────────────
+async function toggleDay(n) {
+  try {
+    const updated = await api('/api/days', 'POST', { day_number: n });
+    daysMap[n] = updated;
+
+    const card = document.getElementById(`dc-${n}`);
+    if (updated.completed) {
+      toast(`Dia ${n} concluído! 🎯`);
+      card.classList.add('popping');
+      card.addEventListener('animationend', () => card.classList.remove('popping'), { once: true });
+    }
+
+    render();
+  } catch (err) {
+    toast('Erro ao atualizar dia');
+    console.error(err);
+  }
+}
+
+async function delEvent(id, e) {
+  e.stopPropagation();
+  try {
+    await api(`/api/events?id=${id}`, 'DELETE');
+    evList = evList.filter(ev => ev.id !== id);
+    renderSchedule();
+    toast('Evento removido');
+  } catch (err) {
+    toast('Erro ao remover evento');
+    console.error(err);
+  }
+}
+
+async function handleDrop(e, newDay, col) {
+  e.preventDefault();
+  col.classList.remove('drag-over');
+  if (dragId === null) return;
+
+  const ev = evList.find(x => x.id === dragId);
+  if (!ev || ev.day_of_week === newDay) { dragId = null; return; }
+
+  try {
+    const updated = await api('/api/events', 'PUT', { id: dragId, day_of_week: newDay });
+    const idx = evList.findIndex(x => x.id === dragId);
+    if (idx !== -1) evList[idx] = updated;
+    renderSchedule();
+    toast(`Movido para ${WD_LONG[newDay]}`);
+  } catch (err) {
+    toast('Erro ao mover evento');
+    console.error(err);
+  }
+
+  dragId = null;
+}
+
+// ── Modal ──────────────────────────────────────────────────────────────────
+function openModal(dayOfWeek) {
+  modalDay = dayOfWeek;
+  document.getElementById('modal-day-name').textContent = WD_LONG[dayOfWeek];
+  document.getElementById('inp-time').value  = '';
+  document.getElementById('inp-title').value = '';
+  selColor = '#c8f135';
+  document.querySelectorAll('.swatch').forEach(s => {
+    s.classList.toggle('on', s.dataset.c === selColor);
+  });
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(() => document.getElementById('inp-time').focus(), 80);
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+  modalDay = null;
+}
+
+document.querySelectorAll('.swatch').forEach(s => {
+  s.addEventListener('click', () => {
+    selColor = s.dataset.c;
+    document.querySelectorAll('.swatch').forEach(x => x.classList.toggle('on', x === s));
+  });
+});
+
+async function saveEvent() {
+  const time  = document.getElementById('inp-time').value.trim();
+  const title = document.getElementById('inp-title').value.trim();
+  if (!time || !title) { toast('Preenche a hora e o nome'); return; }
+
+  try {
+    const ev = await api('/api/events', 'POST', {
+      day_of_week: modalDay,
+      time_label:  time,
+      title,
+      color: selColor,
+    });
+    evList.push(ev);
+    closeModal();
+    renderSchedule();
+    toast(`"${title}" adicionado`);
+  } catch (err) {
+    toast('Erro ao adicionar evento');
+    console.error(err);
+  }
+}
+
+// Enter key submits modal
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter' && document.getElementById('overlay').classList.contains('open')) {
+    saveEvent();
+  }
+});
+
+// Close on backdrop click
+document.getElementById('overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('overlay')) closeModal();
+});
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+let toastT;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
