@@ -474,6 +474,26 @@
       color: #000;
     }
 
+    /* ── Reset button ──────────────────────────────── */
+    .btn-reset {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-family: inherit;
+      font-weight: 600;
+      padding: 5px 10px;
+      transition: border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-reset:hover {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
     /* ── Toast ─────────────────────────────────────── */
     #toast {
       position: fixed;
@@ -525,7 +545,8 @@
 <header>
   <div class="header-top">
     <h1>50 Dias —&nbsp;<em>Foco Total</em></h1>
-    <div class="header-meta">
+    <div class="header-meta" style="display:flex;align-items:center;gap:12px">
+      <button class="btn-reset" onclick="resetAll()">Reiniciar</button>
       <div class="day-counter">
         <strong id="hd-day">—</strong>
         de 53
@@ -783,6 +804,23 @@ async function toggleDay(n) {
     render();
   } catch (err) {
     toast('Erro ao atualizar dia');
+    console.error(err);
+  }
+}
+
+async function resetAll() {
+  if (!confirm('Reiniciar tudo? Isto apaga o progresso dos 53 dias e repõe o horário padrão.')) return;
+  try {
+    await api('/api/reset', 'POST');
+    daysMap = {};
+    evList  = [];
+    const [days, evs] = await Promise.all([api('/api/days'), api('/api/events')]);
+    days.forEach(d => daysMap[d.day_number] = d);
+    evList = evs;
+    render();
+    toast('Progresso reiniciado');
+  } catch (err) {
+    toast('Erro ao reiniciar');
     console.error(err);
   }
 }
