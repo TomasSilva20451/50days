@@ -1,6 +1,6 @@
-# 50 Dias — Foco Total
+# 90 Dias — Foco Total
 
-Personal habit tracker for 53 days (16 Mai → 7 Jul 2026).
+Personal habit tracker for 90 days.
 
 ## Stack
 
@@ -10,7 +10,8 @@ Personal habit tracker for 53 days (16 Mai → 7 Jul 2026).
 
 ## Features
 
-- 53-day progress grid — click any past/current day to mark as done
+- 90-day progress grid — click any past/current day to mark as done
+- Reset button restarts the challenge with today as day 1
 - Weekly schedule with your fixed recurring events pre-loaded
 - Drag-and-drop events between days
 - Add / delete events per day with color coding
@@ -82,7 +83,7 @@ DATABASE_URL=postgresql://...
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/init` | Create tables + seed defaults (idempotent) |
-| `GET` | `/api/days` | Fetch all 53 days with completion status |
+| `GET` | `/api/days` | Fetch all 90 days with completion status |
 | `POST` | `/api/days` | Toggle day completion `{ day_number }` |
 | `GET` | `/api/events` | Fetch all weekly events |
 | `POST` | `/api/events` | Add event `{ day_of_week, time_label, title, color }` |

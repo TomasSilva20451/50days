@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>50 Dias — Foco Total</title>
+  <title>90 Dias — Foco Total</title>
   <style>
     :root {
       --bg:         #0e0e0e;
@@ -132,7 +132,7 @@
       background: var(--border);
     }
 
-    /* ── 53-Day Grid ───────────────────────────────── */
+    /* ── Challenge Grid ─────────────────────────────── */
     .days-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
@@ -544,12 +544,12 @@
 
 <header>
   <div class="header-top">
-    <h1>50 Dias —&nbsp;<em>Foco Total</em></h1>
+    <h1>90 Dias —&nbsp;<em>Foco Total</em></h1>
     <div class="header-meta" style="display:flex;align-items:center;gap:12px">
       <button class="btn-reset" onclick="resetAll()">Reiniciar</button>
       <div class="day-counter">
         <strong id="hd-day">—</strong>
-        de 53
+        de <span id="hd-total">90</span>
       </div>
     </div>
   </div>
@@ -564,7 +564,7 @@
 
 <main>
   <section>
-    <div class="section-label">Progresso — 53 dias</div>
+    <div class="section-label">Progresso — <span id="section-total">90</span> dias</div>
     <div id="days-grid" class="days-grid">
       <!-- skeleton -->
       <div style="color:var(--muted);font-size:.8rem;padding:8px">A carregar…</div>
@@ -616,8 +616,8 @@
 
 <script>
 // ── Constants ──────────────────────────────────────────────────────────────
-const START     = new Date(2026, 6, 12); // 12 Jul 2026 (Domingo)
-const N_DAYS    = 53;
+const DEFAULT_START = new Date(2026, 6, 12); // Legacy default until first reset
+const N_DAYS    = 90;
 const WD_LONG   = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
 const WD_SHORT  = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
 const MONTHS_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -626,9 +626,23 @@ const MONTHS_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','
 // JS getDay():  0=Sun, 1=Mon … 6=Sat
 function jsToOur(j) { return j === 0 ? 6 : j - 1; }
 
+function parseDateOnly(value) {
+  if (!value) return new Date(DEFAULT_START);
+  const [y, m, d] = value.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function dateKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 // ── State ──────────────────────────────────────────────────────────────────
 let daysMap   = {};   // dayNum → row
 let evList    = [];   // [{id,day_of_week,time_label,title,color}]
+let startDate = DEFAULT_START;
 let modalDay  = null; // day_of_week 0-6 currently adding to
 let modalEventId = null;
 let selColor  = '#c8f135';
@@ -650,7 +664,8 @@ async function api(path, method = 'GET', body = null) {
 // ── Init ───────────────────────────────────────────────────────────────────
 async function init() {
   try {
-    await api('/api/init');
+    const boot = await api('/api/init');
+    startDate = parseDateOnly(boot.start_date);
     const [days, evs] = await Promise.all([api('/api/days'), api('/api/events')]);
     days.forEach(d => daysMap[d.day_number] = d);
     evList = evs;
@@ -669,7 +684,7 @@ async function init() {
 
 // ── Date helpers ───────────────────────────────────────────────────────────
 function dayDate(n) {
-  const d = new Date(START);
+  const d = new Date(startDate);
   d.setDate(d.getDate() + n - 1);
   return d;
 }
@@ -680,7 +695,7 @@ function todayFloor() {
 }
 
 function todayNum() {
-  const diff = Math.floor((todayFloor() - START) / 86400000) + 1;
+  const diff = Math.floor((todayFloor() - startDate) / 86400000) + 1;
   return diff;
 }
 
@@ -691,6 +706,8 @@ function render() {
   const tn        = todayNum();
 
   document.getElementById('hd-day').textContent    = Math.min(Math.max(tn, 1), N_DAYS);
+  document.getElementById('hd-total').textContent   = N_DAYS;
+  document.getElementById('section-total').textContent = N_DAYS;
   document.getElementById('prog-fill').style.width = `${pct}%`;
   document.getElementById('prog-label').textContent =
     `${completed} de ${N_DAYS} dias concluídos`;
@@ -809,9 +826,10 @@ async function toggleDay(n) {
 }
 
 async function resetAll() {
-  if (!confirm('Reiniciar tudo? Isto apaga o progresso dos 53 dias e repõe o horário padrão.')) return;
+  if (!confirm(`Reiniciar tudo? Hoje passa a ser o dia 1 dos ${N_DAYS} dias, o progresso é apagado e o horário padrão é reposto.`)) return;
   try {
-    await api('/api/reset', 'POST');
+    const reset = await api('/api/reset', 'POST', { start_date: dateKey(todayFloor()) });
+    startDate = parseDateOnly(reset.start_date);
     daysMap = {};
     evList  = [];
     const [days, evs] = await Promise.all([api('/api/days'), api('/api/events')]);

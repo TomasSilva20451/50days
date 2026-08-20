@@ -1,5 +1,8 @@
 const { getPool } = require('./_db');
 
+const TOTAL_DAYS = 90;
+const DEFAULT_START_DATE = '2026-07-12';
+
 const DEFAULT_EVENTS = [
   // Segunda (0)
   { day_of_week: 0, time_label: '10h ou 17h', title: 'Ginásio', color: '#ff9800', sort_order: 0 },
@@ -55,13 +58,29 @@ module.exports = async (req, res) => {
       )
     `);
 
-    // Seed 53 days (idempotent)
-    for (let i = 1; i <= 53; i++) {
-      await pool.query(
-        'INSERT INTO days (day_number) VALUES ($1) ON CONFLICT DO NOTHING',
-        [i]
-      );
-    }
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS settings (
+        key   VARCHAR(50) PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    `);
+
+    await pool.query(
+      'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      ['start_date', DEFAULT_START_DATE]
+    );
+    await pool.query(
+      `INSERT INTO settings (key, value) VALUES ($1, $2)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      ['total_days', String(TOTAL_DAYS)]
+    );
+
+    await pool.query(
+      `INSERT INTO days (day_number)
+       SELECT generate_series(1, $1)
+       ON CONFLICT DO NOTHING`,
+      [TOTAL_DAYS]
+    );
 
     // Seed default events only if table is empty
     const { rows } = await pool.query('SELECT COUNT(*) FROM events');
@@ -74,7 +93,16 @@ module.exports = async (req, res) => {
       }
     }
 
-    res.status(200).json({ ok: true });
+    const { rows: settings } = await pool.query(
+      "SELECT key, value FROM settings WHERE key IN ('start_date', 'total_days')"
+    );
+    const settingMap = Object.fromEntries(settings.map(s => [s.key, s.value]));
+
+    res.status(200).json({
+      ok: true,
+      start_date: settingMap.start_date || DEFAULT_START_DATE,
+      total_days: parseInt(settingMap.total_days || String(TOTAL_DAYS), 10),
+    });
   } catch (err) {
     console.error('Init error:', err);
     res.status(500).json({ error: err.message });
