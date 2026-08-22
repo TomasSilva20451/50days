@@ -1,6 +1,5 @@
 const { getPool } = require('./_db');
-
-const TOTAL_DAYS = 90;
+const { challengeConfig, todayKey } = require('./_config');
 
 const DEFAULT_EVENTS = [
   { day_of_week: 0, time_label: '10h ou 17h', title: 'Ginásio', color: '#ff9800', sort_order: 0 },
@@ -29,18 +28,25 @@ module.exports = async (req, res) => {
 
   try {
     const pool = getPool();
-    const startDate = req.body?.start_date || new Date().toISOString().slice(0, 10);
+    const config = challengeConfig();
+    const startDate = req.body?.start_date || todayKey();
 
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS days (
+      CREATE TABLE IF NOT EXISTS ${config.tables.days} (
         day_number INTEGER PRIMARY KEY,
         completed   BOOLEAN DEFAULT FALSE,
-        completed_at TIMESTAMP WITH TIME ZONE
+        completed_at TIMESTAMP WITH TIME ZONE,
+        photo_data   TEXT,
+        photo_name   VARCHAR(255),
+        photo_added_at TIMESTAMP WITH TIME ZONE
       )
     `);
+    await pool.query(`ALTER TABLE ${config.tables.days} ADD COLUMN IF NOT EXISTS photo_data TEXT`);
+    await pool.query(`ALTER TABLE ${config.tables.days} ADD COLUMN IF NOT EXISTS photo_name VARCHAR(255)`);
+    await pool.query(`ALTER TABLE ${config.tables.days} ADD COLUMN IF NOT EXISTS photo_added_at TIMESTAMP WITH TIME ZONE`);
 
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS events (
+      CREATE TABLE IF NOT EXISTS ${config.tables.events} (
         id          SERIAL PRIMARY KEY,
         day_of_week SMALLINT NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
         time_label  VARCHAR(30) NOT NULL,
@@ -52,44 +58,56 @@ module.exports = async (req, res) => {
     `);
 
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS settings (
+      CREATE TABLE IF NOT EXISTS ${config.tables.settings} (
         key   VARCHAR(50) PRIMARY KEY,
         value TEXT NOT NULL
       )
     `);
 
     await pool.query(
-      `INSERT INTO settings (key, value) VALUES ($1, $2)
+      `INSERT INTO ${config.tables.settings} (key, value) VALUES ($1, $2)
        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
       ['start_date', startDate]
     );
     await pool.query(
-      `INSERT INTO settings (key, value) VALUES ($1, $2)
+      `INSERT INTO ${config.tables.settings} (key, value) VALUES ($1, $2)
        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-      ['total_days', String(TOTAL_DAYS)]
+      ['total_days', String(config.totalDays)]
     );
 
     await pool.query(
-      `INSERT INTO days (day_number)
+      `INSERT INTO ${config.tables.days} (day_number)
        SELECT generate_series(1, $1)
        ON CONFLICT DO NOTHING`,
-      [TOTAL_DAYS]
+      [config.totalDays]
     );
-    await pool.query('DELETE FROM days WHERE day_number > $1', [TOTAL_DAYS]);
+    await pool.query(`DELETE FROM ${config.tables.days} WHERE day_number > $1`, [config.totalDays]);
 
     // Clear all day completions for the new challenge.
-    await pool.query('UPDATE days SET completed = FALSE, completed_at = NULL');
+    await pool.query(
+      `UPDATE ${config.tables.days}
+       SET completed = FALSE,
+           completed_at = NULL,
+           photo_data = NULL,
+           photo_name = NULL,
+           photo_added_at = NULL`
+    );
 
     // Reset events to defaults
-    await pool.query('DELETE FROM events');
+    await pool.query(`DELETE FROM ${config.tables.events}`);
     for (const e of DEFAULT_EVENTS) {
       await pool.query(
-        'INSERT INTO events (day_of_week, time_label, title, color, sort_order) VALUES ($1,$2,$3,$4,$5)',
+        `INSERT INTO ${config.tables.events} (day_of_week, time_label, title, color, sort_order) VALUES ($1,$2,$3,$4,$5)`,
         [e.day_of_week, e.time_label, e.title, e.color, e.sort_order]
       );
     }
 
-    res.status(200).json({ ok: true, start_date: startDate, total_days: TOTAL_DAYS });
+    res.status(200).json({
+      ok: true,
+      start_date: startDate,
+      total_days: config.totalDays,
+      title: config.title,
+    });
   } catch (err) {
     console.error('Reset error:', err);
     res.status(500).json({ error: err.message });

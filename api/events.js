@@ -1,14 +1,16 @@
 const { getPool } = require('./_db');
+const { challengeConfig } = require('./_config');
 
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
     const pool = getPool();
+    const config = challengeConfig();
 
     if (req.method === 'GET') {
       const { rows } = await pool.query(
-        'SELECT * FROM events ORDER BY day_of_week, sort_order, id'
+        `SELECT * FROM ${config.tables.events} ORDER BY day_of_week, sort_order, id`
       );
       return res.status(200).json(rows);
     }
@@ -19,7 +21,7 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: 'day_of_week, time_label, title required' });
       }
       const { rows } = await pool.query(
-        'INSERT INTO events (day_of_week, time_label, title, color) VALUES ($1,$2,$3,$4) RETURNING *',
+        `INSERT INTO ${config.tables.events} (day_of_week, time_label, title, color) VALUES ($1,$2,$3,$4) RETURNING *`,
         [day_of_week, time_label, title, color || '#c8f135']
       );
       return res.status(201).json(rows[0]);
@@ -31,7 +33,7 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: 'id required' });
       }
       const { rows } = await pool.query(
-        `UPDATE events
+        `UPDATE ${config.tables.events}
          SET day_of_week = COALESCE($1, day_of_week),
              time_label  = COALESCE($2, time_label),
              title       = COALESCE($3, title),
@@ -47,7 +49,7 @@ module.exports = async (req, res) => {
     if (req.method === 'DELETE') {
       const id = req.query.id;
       if (!id) return res.status(400).json({ error: 'id required' });
-      await pool.query('DELETE FROM events WHERE id = $1', [id]);
+      await pool.query(`DELETE FROM ${config.tables.events} WHERE id = $1`, [id]);
       return res.status(200).json({ ok: true });
     }
 

@@ -1,7 +1,5 @@
 const { getPool } = require('./_db');
-
-const TOTAL_DAYS = 90;
-const DEFAULT_START_DATE = '2026-07-12';
+const { challengeConfig } = require('./_config');
 
 const DEFAULT_EVENTS = [
   // Segunda (0)
@@ -37,17 +35,24 @@ module.exports = async (req, res) => {
 
   try {
     const pool = getPool();
+    const config = challengeConfig();
 
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS days (
+      CREATE TABLE IF NOT EXISTS ${config.tables.days} (
         day_number INTEGER PRIMARY KEY,
         completed   BOOLEAN DEFAULT FALSE,
-        completed_at TIMESTAMP WITH TIME ZONE
+        completed_at TIMESTAMP WITH TIME ZONE,
+        photo_data   TEXT,
+        photo_name   VARCHAR(255),
+        photo_added_at TIMESTAMP WITH TIME ZONE
       )
     `);
+    await pool.query(`ALTER TABLE ${config.tables.days} ADD COLUMN IF NOT EXISTS photo_data TEXT`);
+    await pool.query(`ALTER TABLE ${config.tables.days} ADD COLUMN IF NOT EXISTS photo_name VARCHAR(255)`);
+    await pool.query(`ALTER TABLE ${config.tables.days} ADD COLUMN IF NOT EXISTS photo_added_at TIMESTAMP WITH TIME ZONE`);
 
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS events (
+      CREATE TABLE IF NOT EXISTS ${config.tables.events} (
         id          SERIAL PRIMARY KEY,
         day_of_week SMALLINT NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
         time_label  VARCHAR(30) NOT NULL,
@@ -59,49 +64,50 @@ module.exports = async (req, res) => {
     `);
 
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS settings (
+      CREATE TABLE IF NOT EXISTS ${config.tables.settings} (
         key   VARCHAR(50) PRIMARY KEY,
         value TEXT NOT NULL
       )
     `);
 
     await pool.query(
-      'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-      ['start_date', DEFAULT_START_DATE]
+      `INSERT INTO ${config.tables.settings} (key, value) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      ['start_date', config.defaultStartDate]
     );
     await pool.query(
-      `INSERT INTO settings (key, value) VALUES ($1, $2)
+      `INSERT INTO ${config.tables.settings} (key, value) VALUES ($1, $2)
        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-      ['total_days', String(TOTAL_DAYS)]
+      ['total_days', String(config.totalDays)]
     );
 
     await pool.query(
-      `INSERT INTO days (day_number)
+      `INSERT INTO ${config.tables.days} (day_number)
        SELECT generate_series(1, $1)
        ON CONFLICT DO NOTHING`,
-      [TOTAL_DAYS]
+      [config.totalDays]
     );
 
     // Seed default events only if table is empty
-    const { rows } = await pool.query('SELECT COUNT(*) FROM events');
+    const { rows } = await pool.query(`SELECT COUNT(*) FROM ${config.tables.events}`);
     if (parseInt(rows[0].count) === 0) {
       for (const e of DEFAULT_EVENTS) {
         await pool.query(
-          'INSERT INTO events (day_of_week, time_label, title, color, sort_order) VALUES ($1,$2,$3,$4,$5)',
+          `INSERT INTO ${config.tables.events} (day_of_week, time_label, title, color, sort_order) VALUES ($1,$2,$3,$4,$5)`,
           [e.day_of_week, e.time_label, e.title, e.color, e.sort_order]
         );
       }
     }
 
     const { rows: settings } = await pool.query(
-      "SELECT key, value FROM settings WHERE key IN ('start_date', 'total_days')"
+      `SELECT key, value FROM ${config.tables.settings} WHERE key IN ('start_date', 'total_days')`
     );
     const settingMap = Object.fromEntries(settings.map(s => [s.key, s.value]));
 
     res.status(200).json({
       ok: true,
-      start_date: settingMap.start_date || DEFAULT_START_DATE,
-      total_days: parseInt(settingMap.total_days || String(TOTAL_DAYS), 10),
+      start_date: settingMap.start_date || config.defaultStartDate,
+      total_days: parseInt(settingMap.total_days || String(config.totalDays), 10),
+      title: config.title,
     });
   } catch (err) {
     console.error('Init error:', err);

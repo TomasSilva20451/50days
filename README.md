@@ -11,6 +11,8 @@ Personal habit tracker for 90 days.
 ## Features
 
 - 90-day progress grid — click any past/current day to mark as done
+- Photo required to confirm each completed day
+- 100% recap shows all confirmation photos in day order
 - Reset button restarts the challenge with today as day 1
 - Weekly schedule with your fixed recurring events pre-loaded
 - Drag-and-drop events between days
@@ -84,7 +86,7 @@ DATABASE_URL=postgresql://...
 |--------|------|-------------|
 | `GET` | `/api/init` | Create tables + seed defaults (idempotent) |
 | `GET` | `/api/days` | Fetch all 90 days with completion status |
-| `POST` | `/api/days` | Toggle day completion `{ day_number }` |
+| `POST` | `/api/days` | Toggle day completion; completing requires `{ day_number, photo_data }` |
 | `GET` | `/api/events` | Fetch all weekly events |
 | `POST` | `/api/events` | Add event `{ day_of_week, time_label, title, color }` |
 | `PUT` | `/api/events` | Move event to another day `{ id, day_of_week }` |
