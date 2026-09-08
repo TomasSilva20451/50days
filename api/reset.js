@@ -63,6 +63,10 @@ module.exports = async (req, res) => {
         value TEXT NOT NULL
       )
     `);
+    for (const table of Object.values(config.tables)) {
+      await pool.query(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);
+      await pool.query(`REVOKE ALL ON TABLE ${table} FROM anon, authenticated, PUBLIC`);
+    }
 
     await pool.query(
       `INSERT INTO ${config.tables.settings} (key, value) VALUES ($1, $2)
